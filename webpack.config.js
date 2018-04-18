@@ -101,7 +101,12 @@ let conf = {
     ],
     devServer: {
         overlay: true,
-        contentBase: './dist'
+        contentBase: './dist',
+            stats: {
+                assets: false,
+                entrypoints: false,
+                modules: false
+            }
     }
 };
 
