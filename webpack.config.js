@@ -11,8 +11,8 @@ const PATHS = {
 
 let conf = {
     entry: [
-        path.join(PATHS.src, '/js/main.js'),
-        path.join(PATHS.src, '/scss/style.scss')
+        PATHS.src + '/js/main.js',
+        PATHS.src + '/scss/style.scss'
     ],
     output: {
         path: PATHS.dist,
@@ -22,7 +22,6 @@ let conf = {
         rules: [
             {
                 test: /\.scss$/,
-                include: path.join(PATHS.src, 'scss'),
                 exclude: /node_modules/,
                 use: ExtractTextPlugin.extract({
                     use: [
@@ -78,7 +77,7 @@ let conf = {
     },
     plugins: [
         new HtmlWebpackPlugin({
-            template: path.join(PATHS.src, '/html/index.pug'),
+            template: PATHS.src + '/html/index.pug',
             inject: false
         }),
         new ExtractTextPlugin({
@@ -101,7 +100,7 @@ let conf = {
     ],
     devServer: {
         overlay: true,
-        contentBase: './dist',
+        contentBase: PATHS.dist,
             stats: {
                 assets: false,
                 entrypoints: false,
