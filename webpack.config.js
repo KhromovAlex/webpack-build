@@ -10,10 +10,10 @@ const PATHS = {
 };
 
 let conf = {
-    entry: [
-        PATHS.src + '/js/main.js',
-        PATHS.src + '/scss/style.scss'
-    ],
+    entry: {
+        index: [PATHS.src + '/templates/pages/index/index.js', PATHS.src + '/scss/index.scss'],
+        page2: [PATHS.src + '/templates/pages/page2/page2.js', PATHS.src + '/scss/index.scss']
+    },
     output: {
         path: PATHS.dist,
         filename: 'js/[name].js'
@@ -77,11 +77,16 @@ let conf = {
     },
     plugins: [
         new HtmlWebpackPlugin({
-            template: PATHS.src + '/html/index.pug',
-            inject: false
+            template: PATHS.src + '/templates/pages/index/index.pug',
+            excludeChunks: ['page2']
+        }),
+        new HtmlWebpackPlugin({
+            template: PATHS.src + '/templates/pages/page2/page2.pug',
+            filename:'page2.html',
+            excludeChunks: ['index']
         }),
         new ExtractTextPlugin({
-            filename: 'css/styles-[name].css'
+            filename: 'css/main.css'
         }),
         new CopyWebpackPlugin([
             {
@@ -106,7 +111,19 @@ let conf = {
                 entrypoints: false,
                 modules: false
             }
-    }
+    },
+    optimization: {
+        splitChunks: {
+          cacheGroups: {
+            vendors: {
+              chunks: 'all',
+              name: 'vendor',
+              test: /[\\/]node_modules[\\/]/,
+              enforce: true
+            },
+          }
+        }
+      }
 };
 
 module.exports = (env, options) => {
