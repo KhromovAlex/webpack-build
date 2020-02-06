@@ -1,135 +1,206 @@
-'use strict';
-const path = require("path");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
-const ExtractTextPlugin = require("extract-text-webpack-plugin");
-const CopyWebpackPlugin = require("copy-webpack-plugin");
+const path = require('path');
+const HTMLWebpackPlugin = require('html-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const MiniCSSExtractPlugin = require('mini-css-extract-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const postcssPresetEnv = require('postcss-preset-env');
 
-const PATHS = {
-    src: path.resolve(__dirname, 'src'),
-    dist: path.resolve(__dirname, 'dist')
+const ROOT = {
+    from: path.resolve(__dirname, 'src'),
+    to: path.resolve(__dirname, 'dist'),
+    port: 8081
+};
+const isDev = process.env.NODE_ENV === 'development';
+const isProd = !isDev;
+const filename = (ext) => isDev ? `[name].${ext}` : `[name].[hash].${ext}`;
+const jsLoader = () => {
+    const loaders = [
+        {
+            loader: 'babel-loader',
+            options: {
+                presets: [
+                    '@babel/preset-env'
+                ]
+            }
+        }
+    ];
+
+    if(isDev) {
+        loaders.push('eslint-loader')
+    }
+
+    return loaders;
 };
 
-let conf = {
+module.exports = {
+    context: ROOT.from,
     entry: {
-        index: [PATHS.src + '/templates/pages/index/index.js', PATHS.src + '/scss/index.scss'],
-        page2: [PATHS.src + '/templates/pages/page2/page2.js', PATHS.src + '/scss/index.scss']
+        main: ['@babel/polyfill', './index.js'],
     },
     output: {
-        path: PATHS.dist,
-        filename: 'js/[name].js'
+        filename: filename('js'),
+        path: ROOT.to,
     },
-    module: {
-        rules: [
-            {
-                test: /\.scss$/,
-                exclude: /node_modules/,
-                use: ExtractTextPlugin.extract({
-                    use: [
-                        {
-                            loader: 'css-loader',
-                            options: {
-                                sourceMap: true,
-                                minimize: true
-                            }
-                        },
-                        {
-                            loader: 'sass-loader',
-                            options: {
-                                sourceMap: true
-                            }
-                        },
-                        {
-                            loader: 'postcss-loader',
-                            options : {
-                                sourceMap : true
-                            }
-                        }
-                    ],
-                    fallback: 'style-loader'
-                })
-            },
-            {
-                test: /\.pug$/,
-                use: [{
-                    loader: "pug-loader",
-                    options: {
-                        pretty: true
-                    }
-                }],
-
-            }, 
-            {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                use: {
-                    loader: 'babel-loader',
-                    options: {
-                        presets: 'env'
-                    }
-                }
-            },
-            {
-                test: /\.svg$/,
-                loader: 'svg-url-loader'
-            }   
-            
-        ]
-    },
-    plugins: [
-        new HtmlWebpackPlugin({
-            template: PATHS.src + '/templates/pages/index/index.pug',
-            excludeChunks: ['page2']
-        }),
-        new HtmlWebpackPlugin({
-            template: PATHS.src + '/templates/pages/page2/page2.pug',
-            filename:'page2.html',
-            excludeChunks: ['index']
-        }),
-        new ExtractTextPlugin({
-            filename: 'css/main.css'
-        }),
-        new CopyWebpackPlugin([
-            {
-                from: './src/fonts',
-                to: './fonts'
-            },
-            {
-                from: './src/favicon',
-                to: './favicon'
-            },
-            {
-                from: './src/img',
-                to: './img'
-            }
-        ])
-    ],
-    devServer: {
-        overlay: true,
-        contentBase: PATHS.dist,
-            stats: {
-                assets: false,
-                entrypoints: false,
-                modules: false
-            }
+    resolve: {
+        extensions: ['.js', '.jsx', '.json']
     },
     optimization: {
         splitChunks: {
-          cacheGroups: {
-            vendors: {
-              chunks: 'all',
-              name: 'vendor',
-              test: /[\\/]node_modules[\\/]/,
-              enforce: true
-            },
-          }
+            chunks: 'all'
         }
-      }
+    },
+    devServer: {
+        port: ROOT.port,
+        hot: isDev,
+        noInfo: true,
+        open: true,
+        overlay: {
+            warnings: true,
+            errors: true
+        }
+    },
+    devtool: isDev ? 'source-map' : '',
+    plugins: [
+        new HTMLWebpackPlugin({
+            template: './template/index.html',
+            filename: 'index.html',
+            minify: {
+                collapseWhitespace: isProd
+            }
+        }),
+        new CleanWebpackPlugin(),
+        new CopyWebpackPlugin([
+            {
+                from: path.join(ROOT.from, 'static'),
+                to: ROOT.to
+            }
+        ]),
+        new MiniCSSExtractPlugin({
+            filename: filename('css')
+        })
+    ],
+    module: {
+        rules: [
+            {
+                test: /\.html$/,
+                exclude: /node_modules/,
+                use: [
+                    'html-loader',
+                    'markup-inline-loader',
+                ],
+            },
+            {
+                test: /\.pug$/,
+                use: [
+                    {
+                        loader: "pug-loader",
+                        options: {
+                            pretty: isDev,
+                        }
+                    },
+                ],
+            },
+            {
+                test: /\.css$/,
+                use: [
+                    {
+                        loader: MiniCSSExtractPlugin.loader,
+                        options: {
+                            hmr: isDev,
+                            reloadAll: true,
+                            sourceMap: isDev,
+                        },
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                            sourceMap: isDev,
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                            sourceMap: isDev,
+                            ident: 'postcss',
+                            plugins: () => [
+                                postcssPresetEnv({
+                                    browsers: 'last 2 versions',
+                                    autoprefixer: { grid: true }
+                                })
+                            ]
+                        }
+                    },
+                ]
+            },
+            {
+                test: /\.s[ac]ss$/,
+                use: [
+                    {
+                        loader: MiniCSSExtractPlugin.loader,
+                        options: {
+                            hmr: isDev,
+                            reloadAll: true,
+                            sourceMap: isDev,
+                        },
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                            sourceMap: isDev,
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                            sourceMap: isDev,
+                            ident: 'postcss',
+                            plugins: () => [
+                                postcssPresetEnv({
+                                    browsers: 'last 2 versions',
+                                    autoprefixer: { grid: true }
+                                })
+                            ]
+                        }
+                    },
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                            sourceMap: isDev
+                        }
+                    }
+                ]
+            },
+            {
+                test: /\.(png|jpe?g|gif|svg)$/,
+                exclude: /fonts/,
+                use: [
+                    {
+                        loader: 'file-loader',
+                        options: {
+                            name: '[name].[ext]',
+                            outputPath: 'images',
+                            publicPath: 'images',
+                            esModule: false
+                        }
+                    }
+                ]
+            },
+            {
+                test: /\.(otf|ttf|woff|woff2|eot)$/,
+                use: [
+                    {
+                        loader: 'file-loader',
+                        options: {
+                            outputPath: 'fonts',
+                        }
+                    }
+                ],
+            },
+            {
+                test: /\.js$/,
+                exclude: /node_modules/,
+                use: jsLoader()
+            },
+        ]
+    }
 };
-
-module.exports = (env, options) => {
-    let production = options.mode === 'production';
-
-    conf.devtool = production ? 'source-map' : 'eval-sourcemap';
-
-    return conf;
-}
