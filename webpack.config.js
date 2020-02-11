@@ -51,7 +51,6 @@ module.exports = {
     },
     devServer: {
         port: ROOT.port,
-        hot: isDev,
         noInfo: true,
         open: true,
         overlay: {
